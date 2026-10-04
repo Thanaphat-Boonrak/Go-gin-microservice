@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: bank-db
+    environment:
+      POSTGRES_DB: simple_bank
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: Password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bank_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d simple_bank"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  simple-bank:
+    image: thanaphat2005/golang_bank_api:v2
+    container_name: simple-bank-api
+    ports:
+      - "8080:8080"
+    environment:
+      DB_SOURCE: "postgresql://root:Password123@postgres:5432/simple_bank?sslmode=disable"
+      SERVER_ADDRESS: "0.0.0.0:8080"
+      TOKEN_SYMMETRIC_KEY: "12345678901234567890123456789012"
+      ACCESS_TOKEN_DURATION: "15m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bank_network
+
+volumes:
+  postgres_data:
+
+networks:
+  bank_network:
+    driver: bridge
